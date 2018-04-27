@@ -1,0 +1,11 @@
+in order to improve the performance
+I did the following modifications to the original code
+found at https://github.com/sourabhv/FlapPyBird
+
+* limit the bird color to red
+* limit the background to background-day.png
+* limit the pipe color to green
+* remove all the sound effects
+* show the score at the bottom to minimize its impact
+* base does not shift anymore
+* K_a to enter AI mode while K_UP or K_SPACE to enter Manual mode
