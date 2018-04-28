@@ -1,7 +1,7 @@
 FlappyBird AI 
 ===============
 
-When Flappy Bird (Pygame) [1] Meets Machine Learning
+When Flappy Bird (Pygame) [pygame.org] Meets Machine Learning
 
 
 
@@ -15,7 +15,7 @@ Requirements
 3. In command line type pip install -r requirements-cpu.txt (requirements-gpu.txt if you are using a tensorflow-gpu environment)
 ----------
 
-Modifications made to the original Flappy Bird version [2]
+Modifications made to the original Flappy Bird version [pygame flappy bird]
 ------
 
 * limit the bird color to red
@@ -25,7 +25,7 @@ Modifications made to the original Flappy Bird version [2]
 * show the score at the bottom to minimize its impact
 * base does not shift anymore
 * K_a to enter AI mode while K_UP or K_SPACE to enter manual mode
-* add statistic info at the bottomtensorflow-gpu environment)
+* add statistic info at the bottom of the screen
 
 ----------
 
