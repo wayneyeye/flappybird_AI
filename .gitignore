@@ -1,5 +1,5 @@
 venv-cpu/
 venv-gpu/
-game_snapshots/
+snapshot/
 
 model_checkpoints/
