@@ -2,3 +2,4 @@ venv-cpu/
 venv-gpu/
 game_snapshots/
 
+model_checkpoints/
