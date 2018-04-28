@@ -64,7 +64,7 @@ class flappy_agent():
         self.max_score_log=[]
         self.last_100=[]
         self.last_100_avg_log=[]
-        self.model_checkpoints_path="model_checkpoints/flappy_agent_pg_s4_4105_042718_4.ckpt"
+        self.model_checkpoints_path="model_checkpoints/flappy_agent_pg_s4_4105_042718_5.ckpt"
         try:
             saver.restore(self.sess, self.model_checkpoints_path)
         except:
