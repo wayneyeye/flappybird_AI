@@ -1,28 +1,40 @@
-FlappyBirdClone
+FlappyBird AI 
 ===============
 
-A Flappy Bird Clone made using [python-pygame][1]
+When Flappy Bird (Pygame) [1] Meets Machine Learning
 
-How-to
+
+
+Requirements
 ------
 
-1. Install Python 2.7.X or 3.5.x from [here](https://www.python.org/download/releases/)
+1. Install Python 3.5.x from [here](https://www.python.org/download/releases/)
 
 2. Install PyGame 1.9.X from [here](http://www.pygame.org/download.shtml)
 
-3. Clone this repository: `git clone https://github.com/sourabhv/FlappyBirdClone.git` or click `Download ZIP` in right panel and extract it.
+3. In command line type pip install -r requirements-cpu.txt (requirements-gpu.txt if you are using a tensorflow-gpu environment)
+----------
 
-4. Run `python flappy.py` from the repo's directory
+Modifications made to the original Flappy Bird version [2]
+------
 
-5. use <kbd>&uarr;</kbd> or <kbd>Space</kbd> key to play and <kbd>Esc</kbd> to close the game.
+* limit the bird color to red
+* limit the background to background-day.png
+* limit the pipe color to green
+* remove all the sound effects
+* show the score at the bottom to minimize its impact
+* base does not shift anymore
+* K_a to enter AI mode while K_UP or K_SPACE to enter manual mode
+* add statistic info at the bottomtensorflow-gpu environment)
 
-  (Note: Install pyGame for same version python as above)
-
-  (For x64 windows, get exe [here](http://www.lfd.uci.edu/~gohlke/pythonlibs/#pygame))
-
-ScreenShot
 ----------
 
 ![Flappy Bird](screenshot1.png)
 
 [1]: http://www.pygame.org
+[2]: https://github.com/sourabhv/FlapPyBird
+
+
+
+
+
