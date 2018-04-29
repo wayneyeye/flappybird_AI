@@ -1,0 +1,2 @@
+model_checkpoint_path: "flappy_agent_pg_s4_4105_042718_5.ckpt"
+all_model_checkpoint_paths: "flappy_agent_pg_s4_4105_042718_5.ckpt"

@@ -2,4 +2,4 @@ venv-cpu/
 venv-gpu/
 snapshot/
 
-model_checkpoints/
+model_checkpoints_large/
