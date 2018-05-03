@@ -1,30 +1,37 @@
 
 from random import choice, random
 class flappy_agent():
-    def __init__(self,sample_interval=10):
+    def __init__(self,sample_interval=5):
+        #agent sample interval (frames)
         self.sample_interval=sample_interval
+        #model update parameters
         self.discount_rate=0.5
         self.learning_rate=0.5
         self.learning_rate_min=0.05
         self.update_ct={}
         self.epsilon_0=0.99
-        self.epsilon_decay=1
-        
+        self.epsilon_decay=0.2
+        self.flap_rate=0.5 # random exploration
+        # iteration count
         self.iteration=0
         self.n_iteration=0
+        #q-table
         self.state_dict={}
+        #
         self.rewards_list=[]
         self.discounted_rewards_list=[]
         self.state_list=[]
         self.action_list=[]
+        # performance
         self.last_score=0
         self.reward_rate=1
-        self.punishment=1
-        self.bonus=3
         self.highest_score=0
         self.last_100=[]
         self.last_100_average=0
-        self.flap_rate=0.5
+        # punishiment and bonus if crash or score up
+        self.punishment=1
+        self.bonus=3
+        
     
     def new_round(self):
         '''initialize'''
@@ -39,7 +46,7 @@ class flappy_agent():
         self.last_score=0
         self.iteration+=1
         
-    def calculate_update(self):
+    def end_round(self):
         self.rewards_list[-1]-=self.punishment
         cumulated_reward=0
         r_index=len(self.rewards_list)-1
@@ -110,14 +117,6 @@ class flappy_agent():
             print(self.rewards_list)
             print("discounted_rewards")
             print(self.discounted_rewards_list)
-        # if self.iteration==500:
-        #     print("Q-dicts")
-        #     print_keys=list(self.state_dict.keys())
-        #     print_keys=print_keys[-5:]
-        #     for k in print_keys:
-        #         print(self.state_dict[k])
-        #     print("discounted_rewards")
-        #     print(self.discounted_rewards_list)
         print("iteration: {:5d} highest_score: {:4d} states: {:6d} last_100_average:{:5.3f} ct_avg:{:3.3f} ct_min:{:2d}"\
             .format(self.iteration,self.highest_score,\
                 len(self.state_dict),self.last_100_average,sum(self.update_ct.values())/len(self.update_ct.values()),min(self.update_ct.values())),end="\r")
