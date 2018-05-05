@@ -97,8 +97,9 @@ class flappy_agent():
         self.current_gradients=[]
 
         
-    def policy_gradient(self):
+    def update_model(self):
         '''optimize the tf network every fixed intervals'''
+        # Policy Gradient
         if self.game_number%self.n_games_per_update==0:
             all_rewards=self.discount_and_normalize_rewards(self.all_rewards,self.discount_rate)
             feed_dict={}
