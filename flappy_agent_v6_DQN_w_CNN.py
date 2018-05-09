@@ -73,7 +73,8 @@ with tf.name_scope("dense_layers"):
 		hidden1=my_dense(Z_diff,n_hidden1)
 		hidden2=my_dense(hidden1,n_hidden2)
 		hidden3=my_dense(hidden2,n_hidden3)
-		q_values=my_dense(hidden3,n_outputs)
+		q_values=tf.contrib.layers.fully_connected(hidden3,n_outputs,
+			activation_fn=None,weights_initializer=he_init)
 		
 with tf.name_scope("target_q"):
 	with tf.device("/gpu:1"):
