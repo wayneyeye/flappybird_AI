@@ -105,15 +105,15 @@ class flappy_agent():
 		self.n_max_step=2500
 		self.n_games_per_update=5
 		self.save_per_iterations=100
-		self.sample_interval=4
+		self.sample_interval=8
 		self.discount_rate=0.95
 		self.sess=tf.Session()
 		self.epsilon=1
-		self.epsilon_decay=0.01
+		self.epsilon_decay=0.001
 		self.network_learning_rate=0.01
 		self.min_network_learning_rate=0.000001
 		self.network_decay=0.05
-		self.flap_rate=0.2
+		self.flap_rate=0.35
 		
 
 		# DQN algorithm feeds
