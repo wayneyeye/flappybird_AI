@@ -8,7 +8,8 @@ tf.reset_default_graph()
 ## training parameters
 n_hidden1=900
 n_hidden2=1500
-n_hidden3=300
+n_hidden3=1500
+n_hidden4=300
 n_outputs=2
 
 ## define the tf network here
@@ -29,7 +30,7 @@ my_dense=partial(tf.contrib.layers.fully_connected,activation_fn=tf.nn.elu,
 				weights_initializer=he_init)
 
 cae_checkpoints_savepath="model_checkpoints_large/CAE_04302018_2layers_xsmall.ckpt"
-checkpoints_savepath="model_checkpoints_large/DQN_cae_human_05102018_v3.ckpt"
+checkpoints_savepath="model_checkpoints_large/DQN_cae_4hidden_05102018_v4.ckpt"
 pool_sz=(2,2)
 
 # cnn_pool layer 1
@@ -58,7 +59,7 @@ with tf.name_scope("cnn"):
 		Z12=convpool(Z11,W2,b2)
 	
 	# second frame
-	with tf.device("/gpu:1"):
+	with tf.device("/gpu:0"):
 		X2=tf.reshape(tf.slice(X,[0,1,0,0,0],[-1,1,-1,-1,-1]),[-1,128,128,3])
 		Z21=convpool(X2,W1,b1)
 		Z22=convpool(Z21,W2,b2)
@@ -75,7 +76,8 @@ with tf.name_scope("dense_layers"):
 		hidden2=my_dense(hidden1,n_hidden2)
 		hidden2_dropped=tf.layers.dropout(hidden2,rate=0.5,training=traing_flag)
 		hidden3=my_dense(hidden2_dropped,n_hidden3)
-		q_values=tf.contrib.layers.fully_connected(hidden3,n_outputs,
+		hidden4=my_dense(hidden3,n_hidden4)
+		q_values=tf.contrib.layers.fully_connected(hidden4,n_outputs,
 			activation_fn=None,weights_initializer=he_init)
 		
 with tf.name_scope("target_q"):
@@ -87,7 +89,7 @@ with tf.name_scope("training_op"):
 	with tf.device("/gpu:1"):
 		learning_rate=tf.placeholder(tf.float32,shape=[])
 		mse_loss=tf.reduce_mean(tf.squared_difference(q_values,q_target))
-		optimizer=tf.train.AdamOptimizer(learning_rate)
+		optimizer=tf.train.RMSPropOptimizer(learning_rate,momentum=0.9)
 		training_op=optimizer.minimize(mse_loss)
 		init=tf.global_variables_initializer()
 		
@@ -104,19 +106,19 @@ class flappy_agent():
 		# DQN hyper parameters
 		self.iteration=0
 		self.game_number=0
-		self.n_iterations=100000 # after which the epsilon is forced to zero
+		self.n_iterations=10000 # after which the epsilon is forced to zero
 		self.n_max_step=2500
-		self.n_games_per_update=3
-		self.save_per_iterations=100
-		self.sample_interval=12
-		self.discount_rate=0.90
+		self.n_games_per_update=5
+		self.save_per_iterations=1000
+		self.sample_interval=8
+		self.discount_rate=0.95
 		self.sess=tf.Session()
 		self.epsilon=1
-		self.epsilon_decay=0.001
-		self.network_learning_rate=0.01
+		self.epsilon_decay=0.01
+		self.network_learning_rate=0.0001
 		self.min_network_learning_rate=0.00000001
-		self.network_decay=0.001
-		self.flap_rate=0.6
+		self.network_decay=0.1
+		self.flap_rate=0.45
 		
 
 		# DQN algorithm feeds
@@ -142,6 +144,11 @@ class flappy_agent():
 	
 		try:
 			saver_cae_restore.restore(self.sess, cae_checkpoints_savepath)
+		except:
+			print("restoring error, will start over!")
+
+		try:
+			saver.restore(self.sess, checkpoints_savepath)
 		except:
 			print("restoring error, will start over!")
 
@@ -253,8 +260,9 @@ class flappy_agent():
 	def debug(self):
 		'''performance information send to stdout'''
 		if self.iteration>=1:
-			print("iter {:5d} game {:5d} elapsed {:5.0f}s last100_avg {:4.1f} max {:4d} loss {:6.2f} len_obs {:4d}".format\
-				(self.iteration,self.game_number,self.elapsed_time,self.last_100_avg_log[-1],self.max_score,self.loss,self.obs_len),end='\r')
+			print("                                                                                                         ",end='\r')
+			print("iter {:5d} game {:5d} elapsed {:5d}s last100_avg {:4.1f} max {:4d} loss {:6.2f} len_obs {:4d}".format\
+				(self.iteration,self.game_number,int(self.elapsed_time),self.last_100_avg_log[-1],self.max_score,self.loss,self.obs_len),end='\r')
 
 	def logger(self,score):
 		'''log keeper to record game performance during training'''
