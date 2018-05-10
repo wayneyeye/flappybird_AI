@@ -110,7 +110,7 @@ class flappy_agent():
 		self.discount_rate=0.95
 		self.sess=tf.Session()
 		self.epsilon=1
-		self.epsilon_decay=0.0005
+		self.epsilon_decay=0.001
 		self.network_learning_rate=0.01
 		self.min_network_learning_rate=0.000001
 		self.network_decay=0.01
