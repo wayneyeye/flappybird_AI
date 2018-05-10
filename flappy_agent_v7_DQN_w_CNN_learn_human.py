@@ -42,6 +42,7 @@ W2_shape=(4,4,10,3)
 W2_init=init_filter(W2_shape,pool_sz)
 b2_init=np.zeros(W2_shape[-1],dtype=np.float32)
 X=tf.placeholder(tf.float32,shape=(None,2,128,128,3),name="X")
+traing_flag=tf.placeholder_with_default(False,shape=None,name="T_flag")
 
 with tf.name_scope("cnn"):
 	with tf.device("/gpu:0"):
@@ -72,7 +73,8 @@ with tf.name_scope("dense_layers"):
 		# fully connected layer
 		hidden1=my_dense(Z_diff,n_hidden1)
 		hidden2=my_dense(hidden1,n_hidden2)
-		hidden3=my_dense(hidden2,n_hidden3)
+		hidden2_dropped=tf.layers.dropout(hidden2,rate=0.5,training=traing_flag)
+		hidden3=my_dense(hidden2_dropped,n_hidden3)
 		q_values=tf.contrib.layers.fully_connected(hidden3,n_outputs,
 			activation_fn=None,weights_initializer=he_init)
 		
@@ -104,7 +106,7 @@ class flappy_agent():
 		self.game_number=0
 		self.n_iterations=100000 # after which the epsilon is forced to zero
 		self.n_max_step=2500
-		self.n_games_per_update=2
+		self.n_games_per_update=3
 		self.save_per_iterations=100
 		self.sample_interval=12
 		self.discount_rate=0.90
@@ -112,9 +114,9 @@ class flappy_agent():
 		self.epsilon=1
 		self.epsilon_decay=0.001
 		self.network_learning_rate=0.01
-		self.min_network_learning_rate=0.000001
+		self.min_network_learning_rate=0.00000001
 		self.network_decay=0.001
-		self.flap_rate=0.58
+		self.flap_rate=0.6
 		
 
 		# DQN algorithm feeds
@@ -126,7 +128,7 @@ class flappy_agent():
 		self.all_current_qsa=[]
 
 		# DQN batch
-		self.batch_size=100
+		self.batch_size=10
 		self.n_epochs=5
 
 
@@ -158,7 +160,6 @@ class flappy_agent():
 			target_q_values_list=self.all_current_qsa.copy()
 			# print(target_q_values_list)
 			index=0
-			# policy_learning_rate=max(0.05,self.policy_learning_rate/(1+self.iteration*self.policy_decay))
 			for q,a,r in zip(self.all_current_qsa,self.all_actions,self.all_rewards):
 				# if not survived
 				if r<self.reward_rate:
@@ -182,9 +183,14 @@ class flappy_agent():
 					target_q_batch=target_q_values_array[i*self.batch_size:i*self.batch_size+self.batch_size]
 					feed_dict={X:obs_batch,q_target:target_q_batch,learning_rate:current_lr}
 					self.sess.run(training_op,feed_dict=feed_dict)
+			
+			# calculate loss
+			self.loss=self.sess.run([mse_loss],
+			feed_dict={X:obs_X,q_target:target_q_values_array,learning_rate:current_lr,traing_flag:True})[0]
 			# reset all records after model update
 			self.all_actions=[] #
 			self.all_rewards=[] #
+			self.obs_len=len(self.all_obs)
 			self.all_obs=[] #
 			self.all_current_qsa=[]
 			# training iterations update
@@ -246,8 +252,9 @@ class flappy_agent():
 
 	def debug(self):
 		'''performance information send to stdout'''
-		print("iteration {:3d} game {:5d} time_elapsed {:5.0f}s last_100_avg {:4.1f} max.score {:5d}".format\
-			(self.iteration,self.game_number,self.elapsed_time,self.last_100_avg_log[-1],self.max_score),end='\r')
+		if self.iteration>=1:
+			print("iter {:5d} game {:5d} elapsed {:5.0f}s last100_avg {:4.1f} max {:4d} loss {:6.2f} len_obs {:4d}".format\
+				(self.iteration,self.game_number,self.elapsed_time,self.last_100_avg_log[-1],self.max_score,self.loss,self.obs_len),end='\r')
 
 	def logger(self,score):
 		'''log keeper to record game performance during training'''
