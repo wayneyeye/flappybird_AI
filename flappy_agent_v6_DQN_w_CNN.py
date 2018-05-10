@@ -29,7 +29,7 @@ my_dense=partial(tf.contrib.layers.fully_connected,activation_fn=tf.nn.elu,
 				weights_initializer=he_init)
 
 cae_checkpoints_savepath="model_checkpoints_large/CAE_04302018_2layers_xsmall.ckpt"
-checkpoints_savepath="model_checkpoints_large/DQN_cae_05092018_v1.ckpt"
+checkpoints_savepath="model_checkpoints_large/DQN_cae_05092018_v2.ckpt"
 pool_sz=(2,2)
 
 # cnn_pool layer 1
@@ -102,18 +102,18 @@ class flappy_agent():
 		# DQN hyper parameters
 		self.iteration=0
 		self.game_number=0
-		self.n_iterations=3000 # after which the epsilon is forced to zero
+		self.n_iterations=30000 # after which the epsilon is forced to zero
 		self.n_max_step=2500
 		self.n_games_per_update=5
 		self.save_per_iterations=100
 		self.sample_interval=8
-		self.discount_rate=0.95
+		self.discount_rate=0.90
 		self.sess=tf.Session()
 		self.epsilon=1
-		self.epsilon_decay=0.001
+		self.epsilon_decay=0.005
 		self.network_learning_rate=0.01
 		self.min_network_learning_rate=0.000001
-		self.network_decay=0.05
+		self.network_decay=0.02
 		self.flap_rate=0.35
 		
 
