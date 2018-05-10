@@ -102,7 +102,7 @@ class flappy_agent():
 		# DQN hyper parameters
 		self.iteration=0
 		self.game_number=0
-		self.n_iterations=25000 # after which the epsilon is forced to zero
+		self.n_iterations=100000 # after which the epsilon is forced to zero
 		self.n_max_step=2500
 		self.n_games_per_update=5
 		self.save_per_iterations=100
@@ -110,7 +110,7 @@ class flappy_agent():
 		self.discount_rate=0.95
 		self.sess=tf.Session()
 		self.epsilon=1
-		self.epsilon_decay=0.004
+		self.epsilon_decay=0.0005
 		self.network_learning_rate=0.01
 		self.min_network_learning_rate=0.000001
 		self.network_decay=0.01
