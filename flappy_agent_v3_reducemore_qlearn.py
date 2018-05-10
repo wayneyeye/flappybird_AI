@@ -1,4 +1,4 @@
-
+import time
 from random import choice, random
 class flappy_agent():
     def __init__(self,sample_interval=8):
@@ -26,6 +26,7 @@ class flappy_agent():
         self.action_list=[]
         # performance
         self.last_score=0
+        self.start_time=time.time()
         
         self.highest_score=0
         self.last_100=[]
@@ -41,8 +42,6 @@ class flappy_agent():
     
     def new_round(self):
         '''initialize'''
-        self.last_100.append(self.last_score)
-        self.last_100_average=sum(self.last_100)/len(self.last_100)
         self.discounted_rewards_list=[]
         # print(self.rewards_list)
         # print(self.action_list)
@@ -130,8 +129,9 @@ class flappy_agent():
         
 
     def debug(self):
-        print("game {:5d} last_100_avg {:4.1f} max.score {:5d} len_Q_table {:5d} avg_steps {:4.1f}".\
-            format(self.game_number,self.last_100_avg_log[-1],self.max_score,len(self.Q_table),self.last_100_steps_avg_log[-1]),end='\r')
+        print("iteration {:3d} game {:5d} time_elapsed {:5.0f}s last_100_avg {:4.1f} max.score {:5d}".format\
+            (self.iteration,self.game_number,self.elapsed_time,self.last_100_avg_log[-1],self.max_score),end='\r')
+
 
 
     def stateEncoder(self,state):
@@ -164,6 +164,8 @@ class flappy_agent():
             self.last_100_steps=self.last_100_steps[1:]
         self.last_100_steps_avg_log.append(sum(self.last_100_steps)/len(self.last_100_steps))
         self.last_100.append(score)
+        self.end_time=time.time()
+        self.elapsed_time=self.end_time-self.start_time
         if len(self.last_100)>100:
             self.last_100=self.last_100[1:]
         self.last_100_avg_log.append(sum(self.last_100)/len(self.last_100))
