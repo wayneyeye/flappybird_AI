@@ -6,9 +6,9 @@ import time
 
 tf.reset_default_graph()
 ## training parameters
-n_hidden1=100
-n_hidden2=200
-n_hidden3=100
+n_hidden1=400
+n_hidden2=400
+n_hidden3=200
 n_outputs=2
 
 ## define the tf network here
@@ -102,18 +102,18 @@ class flappy_agent():
 		# DQN hyper parameters
 		self.iteration=0
 		self.game_number=0
-		self.n_iterations=30000 # after which the epsilon is forced to zero
+		self.n_iterations=25000 # after which the epsilon is forced to zero
 		self.n_max_step=2500
 		self.n_games_per_update=5
 		self.save_per_iterations=100
 		self.sample_interval=8
-		self.discount_rate=0.90
+		self.discount_rate=0.95
 		self.sess=tf.Session()
 		self.epsilon=1
-		self.epsilon_decay=0.005
+		self.epsilon_decay=0.004
 		self.network_learning_rate=0.01
 		self.min_network_learning_rate=0.000001
-		self.network_decay=0.02
+		self.network_decay=0.01
 		self.flap_rate=0.35
 		
 
@@ -126,7 +126,7 @@ class flappy_agent():
 		self.all_current_qsa=[]
 
 		# DQN batch
-		self.batch_size=50
+		self.batch_size=100
 		self.n_epochs=5
 
 
