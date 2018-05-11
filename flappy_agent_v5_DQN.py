@@ -28,7 +28,7 @@ q_target=tf.placeholder(tf.float32,shape=[None,n_outputs])
 
 learning_rate=tf.placeholder(tf.float32,shape=[])
 mse_loss=tf.reduce_mean(tf.squared_difference(q_values,q_target))
-optimizer=tf.train.AdamOptimizer(learning_rate)
+optimizer=tf.train.RMSPropOptimizer(learning_rate)
 
 training_op=optimizer.minimize(mse_loss)
 init=tf.global_variables_initializer()
@@ -75,7 +75,7 @@ class flappy_agent():
 		self.max_score_log=[]
 		self.last_100=[]
 		self.last_100_avg_log=[]
-		self.model_checkpoints_path="model_checkpoints/flappy_agent_dqn_05082018_v2_4_20_40_20.ckpt"
+		self.model_checkpoints_path="model_checkpoints/flappy_agent_dqn_05082018_v2_4_20_40_20_rep.ckpt"
 		try:
 			saver.restore(self.sess, self.model_checkpoints_path)
 		except:
