@@ -30,7 +30,7 @@ my_dense=partial(tf.contrib.layers.fully_connected,activation_fn=tf.nn.elu,
 				weights_initializer=he_init)
 
 cae_checkpoints_savepath="model_checkpoints_large/CAE_04302018_2layers_xsmall.ckpt"
-checkpoints_savepath="model_checkpoints_large/DQN_cae_4hidden_05102018_v4.ckpt"
+checkpoints_savepath="model_checkpoints_large/DQN_cae_4hidden_05102018_v6.ckpt"
 pool_sz=(2,2)
 
 # cnn_pool layer 1
@@ -106,18 +106,18 @@ class flappy_agent():
 		# DQN hyper parameters
 		self.iteration=0
 		self.game_number=0
-		self.n_iterations=10000 # after which the epsilon is forced to zero
-		self.n_max_step=2500
+		self.n_iterations=3000 # after which the epsilon is forced to zero
+		self.n_max_step=1000
 		self.n_games_per_update=5
-		self.save_per_iterations=1000
+		self.save_per_iterations=100
 		self.sample_interval=8
 		self.discount_rate=0.95
 		self.sess=tf.Session()
 		self.epsilon=1
-		self.epsilon_decay=0.01
-		self.network_learning_rate=0.0001
+		self.epsilon_decay=0.03
+		self.network_learning_rate=0.00001
 		self.min_network_learning_rate=0.00000001
-		self.network_decay=0.1
+		self.network_decay=0.0
 		self.flap_rate=0.45
 		
 
@@ -130,7 +130,7 @@ class flappy_agent():
 		self.all_current_qsa=[]
 
 		# DQN batch
-		self.batch_size=10
+		self.batch_size=25
 		self.n_epochs=5
 
 
@@ -178,7 +178,11 @@ class flappy_agent():
 				target_q_values_list[index][a]=q_new
 				index+=1
 				
-			# convert to numpy array
+			# convert to numpy array and cap at max steps to avoid OOM error
+			if len(target_q_values_list)>self.n_max_step:
+				target_q_values_list=target_q_values_list[-self.n_max_step:]
+				self.all_obs=self.all_obs[-self.n_max_step:]
+
 			target_q_values_array=np.array(target_q_values_list)
 			obs_X=np.array(self.all_obs)
 
@@ -243,6 +247,7 @@ class flappy_agent():
 				best_action=0
 		# record the actions
 		self.all_actions.append(best_action)
+		
 		return best_action
 
 	def next_step(self,state,buffer_array):
