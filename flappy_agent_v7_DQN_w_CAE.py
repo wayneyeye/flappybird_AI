@@ -126,9 +126,9 @@ class flappy_agent():
 		# DQN algorithm feeds
 		self.reward_rate=0.1
 		self.punishment=0
-		self.all_actions=deque()#
-		self.all_rewards=deque() #
-		self.all_obs=deque() # <<- store 2-frame 
+		self.all_actions=deque()
+		self.all_rewards=deque() 
+		self.all_obs=deque()
 		self.all_current_qsa=deque()
 
 		# DQN batch
@@ -143,7 +143,6 @@ class flappy_agent():
 		self.max_score=0
 		self.last_100=deque()
 		self.loss_calculate_flag=False
-		self.loss_predict=-1
 		self.loss=-1
 
 		#list for log caching
