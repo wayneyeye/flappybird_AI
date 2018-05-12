@@ -31,7 +31,8 @@ my_dense=partial(tf.contrib.layers.fully_connected,activation_fn=tf.nn.elu,
 				weights_initializer=he_init)
 
 cae_checkpoints_savepath="model_checkpoints_large/CAE_04302018_2layers_xsmall.ckpt"
-checkpoints_savepath="model_checkpoints_large/DQN_cae_4hidden_05102018_v6.ckpt"
+checkpoints_loadpath="model_checkpoints_large/DQN_cae_4hidden_05102018_v6.ckpt"
+checkpoints_savepath="model_checkpoints_large/new/DQN_cae_4hidden_05102018_v6.ckpt"
 pool_sz=(2,2)
 
 # cnn_pool layer 1
@@ -131,17 +132,29 @@ class flappy_agent():
 		self.all_current_qsa=deque()
 
 		# DQN batch
-		self.batch_size=25
-		self.n_epochs=5
+		self.batch_size=100
+		self.n_epochs=10
 
 
 		# init network and logger
 		self.sess.run(init)
 		self.start_time=time.time()
+		self.elapsed_time=0
 		self.max_score=0
-		self.max_score_log=[]
 		self.last_100=deque()
+		self.loss_calculate_flag=False
+		self.loss_predict=-1
+		self.loss=-1
+
+		#list for log caching
+		self.max_score_log=[]
+		self.iter_log=[]
+		self.game_number_log=[]
 		self.last_100_avg_log=[]
+		self.elapsed_time_log=[]
+		self.loss_train_log=[]
+		self.loss_predict_log=[]
+		
 	
 		try:
 			saver_cae_restore.restore(self.sess, cae_checkpoints_savepath)
@@ -149,7 +162,7 @@ class flappy_agent():
 			print("restoring error, will start over!")
 
 		try:
-			saver.restore(self.sess, checkpoints_savepath)
+			saver.restore(self.sess, checkpoints_loadpath)
 		except:
 			print("restoring error, will start over!")
 
@@ -161,7 +174,7 @@ class flappy_agent():
 
 	def update_model(self):
 		'''optimize the tf network every fixed intervals'''
-		if self.game_number%self.n_games_per_update==0:
+		if len(self.all_obs)==self.n_max_step: # update once reached enough replay memory
 			# calculate q_target
 			target_q_values_list=self.all_current_qsa.copy()
 			# make next q array
@@ -185,21 +198,18 @@ class flappy_agent():
 			# 	target_q_values_list=target_q_values_list[-self.n_max_step:]
 			# 	self.all_obs=self.all_obs[-self.n_max_step:]
 
-			target_q_values_array=np.array(target_q_values_list)
-			obs_X=np.array(self.all_obs)
+			self.target_q_values_array=np.array(target_q_values_list)
+			self.obs_X=np.array(self.all_obs)
 
 			current_lr=max(self.min_network_learning_rate,self.network_learning_rate/(1+self.iteration*self.network_decay))
 			for epoch in range(self.n_epochs):
-				obs_X,target_q_values_array=shuffle(obs_X,target_q_values_array)
-				for i in range(obs_X.shape[0]//self.batch_size):
-					obs_batch=obs_X[i*self.batch_size:i*self.batch_size+self.batch_size]
-					target_q_batch=target_q_values_array[i*self.batch_size:i*self.batch_size+self.batch_size]
+				self.obs_X,self.target_q_values_array=shuffle(self.obs_X,self.target_q_values_array)
+				for i in range(self.obs_X.shape[0]//self.batch_size):
+					obs_batch=self.obs_X[i*self.batch_size:i*self.batch_size+self.batch_size]
+					target_q_batch=self.target_q_values_array[i*self.batch_size:i*self.batch_size+self.batch_size]
 					feed_dict={X:obs_batch,q_target:target_q_batch,learning_rate:current_lr}
 					self.sess.run(training_op,feed_dict=feed_dict)
 			
-			# calculate loss
-			self.loss=self.sess.run([mse_loss],
-			feed_dict={X:obs_X,q_target:target_q_values_array,learning_rate:current_lr,traing_flag:True})[0]
 			# reset all records after model update
 			self.all_actions.clear()#
 			self.all_rewards.clear() #
@@ -208,6 +218,8 @@ class flappy_agent():
 			self.all_current_qsa.clear()
 			# training iterations update
 			self.iteration+=1
+			# sign to update loss log
+			self.loss_calculate_flag=True
 		else:
 			pass
 
@@ -285,16 +297,33 @@ class flappy_agent():
 	def logger(self,score):
 		'''log keeper to record game performance during training'''
 		self.max_score=max(score,self.max_score)
-		self.max_score_log.append(self.max_score)
 		self.last_100.append(score)
 		if len(self.last_100)>100:
 			self.last_100.popleft()
-		self.last_100_avg_log.append(sum(self.last_100)/len(self.last_100))
+		
 		self.end_time=time.time()
-		self.elapsed_time=self.end_time-self.start_time
+		self.elapsed_time=self.elapsed_time+self.end_time-self.start_time
+		self.start_time=self.end_time
+		if self.loss_calculate_flag:
+			# calculate loss
+			self.loss=self.sess.run([mse_loss],
+			feed_dict={X:self.obs_X,q_target:self.target_q_values_array,traing_flag:True})[0]
+			self.loss_predict=self.sess.run([mse_loss],
+			feed_dict={X:self.obs_X,q_target:self.target_q_values_array})[0]
+			self.loss_calculate_flag=False
+		# save model every nth iterations
 		if self.iteration % self.save_per_iterations==0:
 			saver.save(self.sess,checkpoints_savepath)
 			pass
+		# append to log caching
+		self.iter_log.append(self.iteration)
+		self.game_number_log.append(self.game_number)
+		self.elapsed_time_log.append(self.elapsed_time)
+		self.last_100_avg_log.append(sum(self.last_100)/len(self.last_100))
+		self.max_score_log.append(self.max_score)
+		self.loss_train_log.append(self.loss)
+		self.loss_predict_log.append(self.loss_predict)
+
 
 	def get_state(self,state,reduce_factor=1):
 		return {
