@@ -40,19 +40,21 @@ class flappy_agent():
 		# DQN hyper parameters
 		self.iteration=0
 		self.game_number=0
-		self.n_iterations=3000 # after which the epsilon is forced to zero
+		self.n_iterations=100 # after which the epsilon is forced to zero
 		self.n_max_step=1000
 		self.n_games_per_update=5
-		self.save_per_iterations=100
+		self.save_per_iterations=10
 		self.sample_interval=4
 		self.discount_rate=0.95
 		self.sess=tf.Session()
 		self.epsilon=1
-		self.epsilon_decay=0.01
+		self.current_epsilon=self.epsilon
+		self.epsilon_decay=3
 		self.network_learning_rate=0.01
+		self.current_lr=self.network_learning_rate
 		self.min_network_learning_rate=0.000001
-		self.network_decay=0.05
-		self.flap_rate=0.2
+		self.network_decay=3
+		self.flap_rate=0.225
 		
 
 		# DQN algorithm feeds
@@ -84,9 +86,13 @@ class flappy_agent():
 		self.iter_log=[]
 		self.game_number_log=[]
 		self.last_100_avg_log=[]
+		self.last_10_avg_log=[]
+		self.last_1_avg_log=[]
 		self.elapsed_time_log=[]
 		self.loss_train_log=[]
 		self.loss_predict_log=[]
+		self.current_lr_log=[]
+		self.current_epsilon_log=[]
 
 		try:
 			saver.restore(self.sess, self.model_checkpoints_path)
@@ -102,6 +108,13 @@ class flappy_agent():
 	def update_model(self):
 		'''optimize the tf network every fixed intervals'''
 		if len(self.all_obs)==self.n_max_step:
+			#update epsilon
+			self.current_epsilon=max(self.current_epsilon-\
+				self.current_epsilon*(1/max(1,self.n_iterations-self.iteration))*self.epsilon_decay,0)
+			#update learning_rate
+			self.current_lr=max(self.current_lr-\
+				self.current_lr*(1/max(1,self.n_iterations-self.iteration))*self.network_decay,self.min_network_learning_rate)
+
 		# process in batch to speed up
 			# calculate q_target
 			target_q_values_list=self.all_current_qsa.copy()
@@ -126,13 +139,12 @@ class flappy_agent():
 			self.target_q_values_array=np.array(target_q_values_list)
 			self.obs_X=np.array(self.all_obs)
 			# debug
-			current_lr=max(self.min_network_learning_rate,self.network_learning_rate/(1+self.iteration*self.network_decay))
 			for epoch in range(self.n_epochs):
 				self.obs_X,self.target_q_values_array=shuffle(self.obs_X,self.target_q_values_array)
 				for i in range(self.obs_X.shape[0]//self.batch_size):
 					obs_batch=self.obs_X[i*self.batch_size:i*self.batch_size+self.batch_size]
 					target_q_batch=self.target_q_values_array[i*self.batch_size:i*self.batch_size+self.batch_size]
-					feed_dict={X:obs_batch,q_target:target_q_batch,learning_rate:current_lr}
+					feed_dict={X:obs_batch,q_target:target_q_batch,learning_rate:self.current_lr}
 					self.sess.run(training_op,feed_dict=feed_dict)
 			# reset all records after model update
 			self.all_actions.clear()#
@@ -163,7 +175,7 @@ class flappy_agent():
 			self.all_current_qsa.popleft()
 		# get the best action (epsilon greedy)
 		if self.iteration<=self.n_iterations:
-			if random()<self.epsilon/(1+self.iteration*self.epsilon_decay):
+			if random()<self.current_epsilon:
 				best_action=self.flap()
 			else:
 				if q_val[0][0,1]>=q_val[0][0,0]:
@@ -226,16 +238,20 @@ class flappy_agent():
 		self.iter_log.append(self.iteration)
 		self.game_number_log.append(self.game_number)
 		self.elapsed_time_log.append(self.elapsed_time)
-		self.last_100_avg_log.append(sum(self.last_100)/len(self.last_100))
+		self.last_100_avg_log.append(sum(self.last_100[-min(100,len(self.last_100)):])/min(100,len(self.last_100)))
+		self.last_10_avg_log.append(sum(self.last_100[-min(10,len(self.last_100)):])/min(10,len(self.last_100)))
+		self.last_1_avg_log.append(sum(self.last_100[-min(1,len(self.last_100)):])/min(1,len(self.last_100)))
 		self.max_score_log.append(self.max_score)
 		self.loss_train_log.append(self.loss)
+		self.current_lr_log.append(self.current_lr)
+		self.current_epsilon_log.append(self.current_epsilon)
 
 
 
 	def stateWrapper(self,state):
 		'''simple division added to ensure the range of the input space'''
 		return np.array([state['playery']/500,state['pipeY']/500,state['playerVelY']/10,state['pipeRightPos']/200])
-	
+
 	def get_state(self,state,reduce_factor=1):
 		playerLeftPos=state['playerx']
 		pipeRightPos=state['lowerPipes'][0]['x']+52
