@@ -72,7 +72,6 @@ class flappy_agent():
 
 		# init network and logger
 		self.sess.run(init)
-		self.model_checkpoints_path="model_checkpoints/flappy_agent_dqn_4_engineered.ckpt"
 		self.start_time=time.time()
 		self.elapsed_time=0
 		self.max_score=0
@@ -94,12 +93,18 @@ class flappy_agent():
 		self.current_lr_log=[]
 		self.current_epsilon_log=[]
 
+	def save_model(self):
+		saver.save(self.sess,self.model_checkpoints_path)
+
+
+	def restore_model(self):
+		self.model_checkpoints_path="model_checkpoints/"+self.model_prefix+self.model_suffix+".ckpt"
 		try:
 			saver.restore(self.sess, self.model_checkpoints_path)
 		except:
 			print("no matched model checkpoints will start over")
 
-	
+
 	def new_round(self):
 		'''initialize before each game'''
 		self.game_number+=1
@@ -232,8 +237,7 @@ class flappy_agent():
 			feed_dict={X:self.obs_X,q_target:self.target_q_values_array})[0]
 			self.loss_calculate_flag=False
 		if self.iteration % self.save_per_iterations==0:
-			saver.save(self.sess,self.model_checkpoints_path)
-			pass
+			self.save_model()
 		# append to log caching
 		self.iter_log.append(self.iteration)
 		self.game_number_log.append(self.game_number)
