@@ -7,10 +7,9 @@ from collections import deque
 
 tf.reset_default_graph()
 ## training parameters
-n_hidden1=1000
-n_hidden2=2000
-n_hidden3=2000
-n_hidden4=1000
+n_hidden1=500
+n_hidden2=1000
+n_hidden3=1000
 n_outputs=2
 
 ## define the tf network here
@@ -37,18 +36,28 @@ W1_init=init_filter(W1_shape,pool_sz)
 b1_init=np.zeros(W1_shape[-1],dtype=np.float32)
 
 # cnn_pool layer 2
-W2_shape=(4,4,10,3)
+W2_shape=(4,4,10,20)
 W2_init=init_filter(W2_shape,pool_sz)
 b2_init=np.zeros(W2_shape[-1],dtype=np.float32)
+X=tf.placeholder(tf.float32,shape=(None,2,128,128,3),name="X")
+
+# cnn_pool layer 2
+W3_shape=(4,4,20,40)
+W3_init=init_filter(W3_shape,pool_sz)
+b3_init=np.zeros(W3_shape[-1],dtype=np.float32)
+
+
 X=tf.placeholder(tf.float32,shape=(None,2,128,128,3),name="X")
 traing_flag=tf.placeholder_with_default(False,shape=None,name="T_flag")
 
 with tf.name_scope("cnn"):
 	with tf.device("/gpu:0"):
-		W1=tf.Variable(W1_init.astype(np.float32),trainable=False,name='W1')
-		b1=tf.Variable(b1_init.astype(np.float32),trainable=False,name='b1')
-		W2=tf.Variable(W2_init.astype(np.float32),trainable=False,name='W2')
-		b2=tf.Variable(b2_init.astype(np.float32),trainable=False,name='b2')
+		W1=tf.Variable(W1_init.astype(np.float32),name='W1')
+		b1=tf.Variable(b1_init.astype(np.float32),name='b1')
+		W2=tf.Variable(W2_init.astype(np.float32),name='W2')
+		b2=tf.Variable(b2_init.astype(np.float32),name='b2')
+		W3=tf.Variable(W3_init.astype(np.float32),name='W3')
+		b3=tf.Variable(b3_init.astype(np.float32),name='b3')
 	
 	# first frame
 	with tf.device("/gpu:0"):
@@ -71,11 +80,11 @@ with tf.name_scope("dense_layers"):
 	with tf.device("/gpu:1"):
 		# fully connected layer
 		hidden1=my_dense(Z_diff,n_hidden1)
-		hidden2=my_dense(hidden1,n_hidden2)
-		hidden2_dropped=tf.layers.dropout(hidden2,rate=0.2,training=traing_flag)
+		hidden1_dropped=tf.layers.dropout(hidden1,rate=0.5,training=traing_flag)
+		hidden2=my_dense(hidden1_dropped,n_hidden2)
+		hidden2_dropped=tf.layers.dropout(hidden2,rate=0.5,training=traing_flag)
 		hidden3=my_dense(hidden2_dropped,n_hidden3)
-		hidden4=my_dense(hidden3,n_hidden4)
-		q_values=tf.contrib.layers.fully_connected(hidden4,n_outputs,
+		q_values=tf.contrib.layers.fully_connected(hidden3,n_outputs,
 			activation_fn=None,weights_initializer=he_init)
 		
 with tf.name_scope("target_q"):
@@ -93,8 +102,6 @@ with tf.name_scope("training_op"):
 		
 
 with tf.name_scope("saver"):
-	var_list={'cnn/Variable':W1,'cnn/Variable_1':b1,'cnn/Variable_2':W2,'cnn/Variable_3':b2}
-	saver_cae_restore = tf.train.Saver(var_list=var_list)
 	saver= tf.train.Saver()
 
 
@@ -104,10 +111,9 @@ class flappy_agent():
 		# DQN hyper parameters
 		self.iteration=0
 		self.game_number=0
-		self.n_iterations=3000 # after which the epsilon is forced to zero
+		self.n_iterations=500 # after which the epsilon is forced to zero
 		self.n_max_step=1000 # size of replay memory
-		self.n_games_per_update=5
-		self.save_per_iterations=100
+		self.save_per_iterations=10
 		self.sample_interval=8
 		self.discount_rate=0.95
 		self.sess=tf.Session()
@@ -130,7 +136,7 @@ class flappy_agent():
 		self.all_current_qsa=deque()
 
 		# DQN batch
-		self.batch_size=100
+		self.batch_size=50
 		self.n_epochs=10
 
 
@@ -159,15 +165,8 @@ class flappy_agent():
 		
 
 	def restore_model(self):
-		self.cae_checkpoints_savepath="model_checkpoints_large/cae_checkpoints.ckpt"
 		self.model_checkpoints_savepath="model_checkpoints_large/new/"+self.model_prefix+self.model_suffix+".ckpt"
 		self.model_checkpoints_loadpath="model_checkpoints_large/"+self.model_prefix+self.model_suffix+".ckpt"
-		# try restore the CAE layer first
-		try:
-			saver_cae_restore.restore(self.sess, self.cae_checkpoints_savepath)
-		except:
-			print("CAE layer restoring error, will start over!")
-
 		# restore the rest of the weights
 		try:
 			saver.restore(self.sess, self.model_checkpoints_loadpath)
@@ -210,11 +209,6 @@ class flappy_agent():
 				# modify only the q(s,a) that has been executed
 				target_q_values_list[index][a]=q_new
 				index+=1
-				
-			# convert to numpy array and cap at max steps to avoid OOM error
-			# if len(target_q_values_list)>self.n_max_step:
-			# 	target_q_values_list=target_q_values_list[-self.n_max_step:]
-			# 	self.all_obs=self.all_obs[-self.n_max_step:]
 
 			self.target_q_values_array=np.array(target_q_values_list)
 			self.obs_X=np.array(self.all_obs)
