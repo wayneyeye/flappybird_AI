@@ -7,10 +7,9 @@ from collections import deque
 
 tf.reset_default_graph()
 ## training parameters
-n_hidden1=1000
-n_hidden2=2000
+n_hidden1=2000
+n_hidden2=4000
 n_hidden3=2000
-n_hidden4=1000
 n_outputs=2
 
 ## define the tf network here
@@ -41,7 +40,7 @@ W2_shape=(4,4,10,3)
 W2_init=init_filter(W2_shape,pool_sz)
 b2_init=np.zeros(W2_shape[-1],dtype=np.float32)
 X=tf.placeholder(tf.float32,shape=(None,2,128,128,3),name="X")
-traing_flag=tf.placeholder_with_default(False,shape=None,name="T_flag")
+training_flag=tf.placeholder_with_default(False,shape=None,name="T_flag")
 
 with tf.name_scope("cnn"):
 	with tf.device("/gpu:0"):
@@ -71,11 +70,11 @@ with tf.name_scope("dense_layers"):
 	with tf.device("/gpu:1"):
 		# fully connected layer
 		hidden1=my_dense(Z_diff,n_hidden1)
-		hidden2=my_dense(hidden1,n_hidden2)
-		hidden2_dropped=tf.layers.dropout(hidden2,rate=0.2,training=traing_flag)
+		hidden1_dropped=tf.layers.dropout(hidden1,rate=0.5,training=training_flag)
+		hidden2=my_dense(hidden1_dropped,n_hidden2)
+		hidden2_dropped=tf.layers.dropout(hidden2,rate=0.5,training=training_flag)
 		hidden3=my_dense(hidden2_dropped,n_hidden3)
-		hidden4=my_dense(hidden3,n_hidden4)
-		q_values=tf.contrib.layers.fully_connected(hidden4,n_outputs,
+		q_values=tf.contrib.layers.fully_connected(hidden3,n_outputs,
 			activation_fn=None,weights_initializer=he_init)
 		
 with tf.name_scope("target_q"):
@@ -145,6 +144,7 @@ class flappy_agent():
 		self.loss=-1
 
 		#list for log caching
+		self.saved_flag=False
 		self.max_score_log=[]
 		self.iter_log=[]
 		self.game_number_log=[]
@@ -190,7 +190,7 @@ class flappy_agent():
 				self.current_epsilon*(1/max(1,self.n_iterations-self.iteration))*self.epsilon_decay,0)
 			#update learning_rate
 			self.current_lr=max(self.current_lr-\
-				self.current_lr*(1/max(1,self.n_iterations-self.iteration))*self.network_decay,self.min_network_learning_rate)
+				(self.current_lr-self.min_network_learning_rate)*(1/max(1,self.n_iterations-self.iteration))*self.network_decay,self.min_network_learning_rate)
 
 		if len(self.all_obs)==self.n_max_step: # update once reached enough replay memory
 			# calculate q_target
@@ -219,13 +219,17 @@ class flappy_agent():
 			self.target_q_values_array=np.array(target_q_values_list)
 			self.obs_X=np.array(self.all_obs)
 
-			current_lr=max(self.min_network_learning_rate,self.network_learning_rate/(1+self.iteration*self.network_decay))
+			# calculate loss
+			self.loss=self.sess.run([mse_loss],
+			feed_dict={X:self.obs_X,q_target:self.target_q_values_array,training_flag:True})[0]
+			self.loss_predict=self.sess.run([mse_loss],
+			feed_dict={X:self.obs_X,q_target:self.target_q_values_array})[0]
 			for epoch in range(self.n_epochs):
 				self.obs_X,self.target_q_values_array=shuffle(self.obs_X,self.target_q_values_array)
 				for i in range(self.obs_X.shape[0]//self.batch_size):
 					obs_batch=self.obs_X[i*self.batch_size:i*self.batch_size+self.batch_size]
 					target_q_batch=self.target_q_values_array[i*self.batch_size:i*self.batch_size+self.batch_size]
-					feed_dict={X:obs_batch,q_target:target_q_batch,learning_rate:current_lr}
+					feed_dict={X:obs_batch,q_target:target_q_batch,learning_rate:self.current_lr,training_flag:True}
 					self.sess.run(training_op,feed_dict=feed_dict)
 			
 			# reset all records after model update
@@ -235,6 +239,7 @@ class flappy_agent():
 			self.all_obs.clear() #
 			self.all_current_qsa.clear()
 			# training iterations update
+			self.saved_flag=False
 			self.iteration+=1
 			# sign to update loss log
 			self.loss_calculate_flag=True
@@ -271,7 +276,7 @@ class flappy_agent():
 			self.all_current_qsa.popleft()
 		# get the best action (epsilon greedy)
 		if self.iteration<=self.n_iterations:
-			if random()<self.epsilon/(1+self.iteration*self.epsilon_decay):
+			if random()<self.current_epsilon:
 				best_action=self.flap()
 			else:
 				if q_val[0][0,1]>=q_val[0][0,0]:
@@ -323,15 +328,11 @@ class flappy_agent():
 		self.elapsed_time=self.elapsed_time+self.end_time-self.start_time
 		self.start_time=self.end_time
 		if self.loss_calculate_flag:
-			# calculate loss
-			self.loss=self.sess.run([mse_loss],
-			feed_dict={X:self.obs_X,q_target:self.target_q_values_array,traing_flag:True})[0]
-			self.loss_predict=self.sess.run([mse_loss],
-			feed_dict={X:self.obs_X,q_target:self.target_q_values_array})[0]
 			self.loss_calculate_flag=False
 		# save model every nth iterations
-		if self.iteration % self.save_per_iterations==0:
+		if self.iteration % self.save_per_iterations==0 and self.saved_flag==False:
 			self.save_model()
+			self.saved_flag=True
 		# append to log caching
 		self.iter_log.append(self.iteration)
 		self.game_number_log.append(self.game_number)
