@@ -7,10 +7,10 @@ from collections import deque
 
 tf.reset_default_graph()
 ## training parameters
-n_hidden1=1000
-n_hidden2=2000
-n_hidden3=2000
-n_hidden4=1000
+n_hidden1=2000
+n_hidden2=4000
+n_hidden3=4000
+n_hidden4=2000
 n_outputs=2
 
 ## define the tf network here
@@ -107,7 +107,7 @@ class flappy_agent():
 		self.iteration=0
 		self.game_number=0
 		self.n_iterations=100 # after which the epsilon is forced to zero
-		self.n_max_step=1000 # size of replay memory
+		self.n_max_step=100 # size of replay memory
 		self.n_games_per_update=5
 		self.save_per_iterations=10
 		self.sample_interval=8
@@ -118,7 +118,7 @@ class flappy_agent():
 		self.epsilon_decay=3
 		self.network_learning_rate=0.00001
 		self.current_lr=self.network_learning_rate
-		self.min_network_learning_rate=0.00001
+		self.min_network_learning_rate=0.000001
 		self.network_decay=3
 		self.flap_rate=0.45
 		
@@ -132,7 +132,7 @@ class flappy_agent():
 		self.all_current_qsa=deque()
 
 		# DQN batch
-		self.batch_size=100
+		self.batch_size=10
 		self.n_epochs=10
 
 
@@ -209,16 +209,12 @@ class flappy_agent():
 					q_next_list=[0,0]
 				else:
 					q_next_list=list(next_q_values_array[index,:])
+				# target Q
 				q_new=r+self.discount_rate*max(q_next_list)
 				# modify only the q(s,a) that has been executed
 				target_q_values_list[index][a]=q_new
 				index+=1
 				
-			# convert to numpy array and cap at max steps to avoid OOM error
-			# if len(target_q_values_list)>self.n_max_step:
-			# 	target_q_values_list=target_q_values_list[-self.n_max_step:]
-			# 	self.all_obs=self.all_obs[-self.n_max_step:]
-
 			self.target_q_values_array=np.array(target_q_values_list)
 			self.obs_X=np.array(self.all_obs)
 
@@ -227,6 +223,15 @@ class flappy_agent():
 			feed_dict={X:self.obs_X,q_target:self.target_q_values_array,training_flag:True})[0]
 			self.loss_predict=self.sess.run([mse_loss],
 			feed_dict={X:self.obs_X,q_target:self.target_q_values_array})[0]
+			# save the diff snapshot to debug
+			# self.snapshot_Z12=self.sess.run([Z12],
+			# feed_dict={X:self.obs_X,q_target:self.target_q_values_array,training_flag:True})[0]
+			# self.snapshot_Z22=self.sess.run([Z22],
+			# feed_dict={X:self.obs_X,q_target:self.target_q_values_array,training_flag:True})[0]
+
+			# self.snapshot_diff=self.sess.run([Z_diff],
+			# feed_dict={X:self.obs_X,q_target:self.target_q_values_array,training_flag:True})[0]
+
 			for epoch in range(self.n_epochs):
 				self.obs_X,self.target_q_values_array=shuffle(self.obs_X,self.target_q_values_array)
 				for i in range(self.obs_X.shape[0]//self.batch_size):
@@ -244,8 +249,6 @@ class flappy_agent():
 			# training iterations update
 			self.saved_flag=False
 			self.iteration+=1
-			# sign to update loss log
-			self.loss_calculate_flag=True
 		else:
 			pass
 
@@ -330,8 +333,6 @@ class flappy_agent():
 		self.end_time=time.time()
 		self.elapsed_time=self.elapsed_time+self.end_time-self.start_time
 		self.start_time=self.end_time
-		if self.loss_calculate_flag:
-			self.loss_calculate_flag=False
 		# save model every nth iterations
 		if self.iteration % self.save_per_iterations==0 and self.saved_flag==False:
 			self.save_model()
