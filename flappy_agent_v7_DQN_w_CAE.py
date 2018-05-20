@@ -7,9 +7,10 @@ from collections import deque
 
 tf.reset_default_graph()
 ## training parameters
-n_hidden1=2000
-n_hidden2=4000
+n_hidden1=1000
+n_hidden2=2000
 n_hidden3=2000
+n_hidden4=1000
 n_outputs=2
 
 ## define the tf network here
@@ -70,11 +71,13 @@ with tf.name_scope("dense_layers"):
 	with tf.device("/gpu:1"):
 		# fully connected layer
 		hidden1=my_dense(Z_diff,n_hidden1)
-		hidden1_dropped=tf.layers.dropout(hidden1,rate=0.5,training=training_flag)
+		hidden1_dropped=tf.layers.dropout(hidden1,rate=0.0,training=training_flag)
 		hidden2=my_dense(hidden1_dropped,n_hidden2)
-		hidden2_dropped=tf.layers.dropout(hidden2,rate=0.5,training=training_flag)
+		hidden2_dropped=tf.layers.dropout(hidden2,rate=0.0,training=training_flag)
 		hidden3=my_dense(hidden2_dropped,n_hidden3)
-		q_values=tf.contrib.layers.fully_connected(hidden3,n_outputs,
+		hidden3_dropped=tf.layers.dropout(hidden3,rate=0.0,training=training_flag)
+		hidden4=my_dense(hidden3_dropped,n_hidden4)
+		q_values=tf.contrib.layers.fully_connected(hidden4,n_outputs,
 			activation_fn=None,weights_initializer=he_init)
 		
 with tf.name_scope("target_q"):
@@ -103,19 +106,19 @@ class flappy_agent():
 		# DQN hyper parameters
 		self.iteration=0
 		self.game_number=0
-		self.n_iterations=3000 # after which the epsilon is forced to zero
+		self.n_iterations=100 # after which the epsilon is forced to zero
 		self.n_max_step=1000 # size of replay memory
 		self.n_games_per_update=5
-		self.save_per_iterations=100
+		self.save_per_iterations=10
 		self.sample_interval=8
 		self.discount_rate=0.95
 		self.sess=tf.Session()
 		self.epsilon=1
 		self.current_epsilon=self.epsilon
 		self.epsilon_decay=3
-		self.network_learning_rate=0.01
+		self.network_learning_rate=0.00001
 		self.current_lr=self.network_learning_rate
-		self.min_network_learning_rate=0.000001
+		self.min_network_learning_rate=0.00001
 		self.network_decay=3
 		self.flap_rate=0.45
 		
